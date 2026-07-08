@@ -10,16 +10,19 @@ import gc
 # GitHub OTA settings
 # -----------------------------
 
-GITHUB_USER = "YOUR_GITHUB_USERNAME"
-GITHUB_REPO = "YOUR_REPO_NAME"
+GITHUB_USER = "CLOW-94"
+GITHUB_REPO = "RemoteSensor"
 GITHUB_BRANCH = "main"
 
 VERSION_FILE = "version.txt"
 
 # Files that are allowed to update from GitHub
 OTA_FILES = [
-    "main.py",
-    "ota_update.py"
+    "boot.py",
+    "ota_update.py",
+    "BMP280.py",
+    "veml7700.py"
+
 ]
 
 BASE_URL = "https://raw.githubusercontent.com/{}/{}/{}/".format(
@@ -170,3 +173,4 @@ def check_for_updates():
                 pass
 
         return False
+
