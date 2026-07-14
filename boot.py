@@ -170,4 +170,4 @@ while True:
         except Exception as reconnect_error:
             print("MQTT reconnect error:", reconnect_error)
 
-    time.sleep(2)
+    time.sleep(10)
