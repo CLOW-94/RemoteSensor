@@ -19,6 +19,7 @@ VERSION_FILE = "version.txt"
 # Files that are allowed to update from GitHub
 OTA_FILES = [
     "boot.py",
+    "main.py",
     "ota_update.py",
     "BMP280.py",
     "veml7700.py"
