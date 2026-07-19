@@ -1,11 +1,53 @@
+# ============================================================
+# main.py
+#
+# This program:
+# 1. Connects the ESP32/Pico W to WiFi
+# 2. Checks for OTA updates
+# 3. Connects to the MQTT broker running on your Raspberry Pi
+# 4. Reads data from the BMP280 and VEML7700 sensors
+# 5. Publishes one JSON payload to the MQTT topic:
+#
+#       office/telemetry
+#
+# Node-RED receives that MQTT message, writes it to InfluxDB,
+# and Grafana displays it on your dashboard.
+# ============================================================
+
+
+# -----------------------------
+# Import required libraries
+# -----------------------------
+
+# network is used to connect to WiFi
 import network
+
+# time is used for delays and loop timing
 import time
+
+# ujson converts Python dictionaries into JSON strings
+# Example:
+# {"temperature": 72.5}
+import ujson
+
+# MQTTClient is used to publish MQTT messages to Mosquitto
 from umqtt.simple import MQTTClient
+
+# Pin and I2C are used to communicate with the sensors
 from machine import Pin, I2C
+
+# BMP280 sensor library
+# Used for temperature and pressure
 import BMP280
+
+# VEML7700 sensor library
+# Used for light/lux readings
 from veml7700 import VEML7700
 
+# Local config file with WiFi and MQTT settings
 import config
+
+# Local OTA update module
 import ota_update
 
 
@@ -13,136 +55,28 @@ import ota_update
 # I2C sensor setup
 # -----------------------------
 
+# Create the I2C bus.
+#
+# Your current wiring uses:
+# SCL = Pin 9
+# SDA = Pin 8
+#
+# freq=100000 sets I2C speed to 100 kHz, which is safe for most sensors.
 i2c = I2C(0, scl=Pin(9), sda=Pin(8), freq=100000)
 
+# Scan the I2C bus and print detected device addresses.
+# This is useful for troubleshooting wiring or sensor issues.
 print("I2C devices:", [hex(addr) for addr in i2c.scan()])
 
+# Create the BMP280 object.
+# Your BMP280 is currently detected at address 0x76.
 bmp = BMP280.BMP280(i2c=i2c, address=0x76)
-sensor = VEML7700(i2c)
+
+# Create the VEML7700 light sensor object.
+light_sensor = VEML7700(i2c)
 
 
 # -----------------------------
-# WiFi connection
+# WiFi connection function
 # -----------------------------
 
-def wifi_connect():
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-
-    if not wlan.isconnected():
-        print("Connecting to WiFi...")
-        wlan.connect(
-            config.wifi_ssid,
-            config.wifi_password
-        )
-
-        timeout = 20
-
-        while not wlan.isconnected() and timeout > 0:
-            print("Waiting for WiFi...")
-            time.sleep(1)
-            timeout -= 1
-
-        if not wlan.isconnected():
-            raise RuntimeError("WiFi connection failed")
-
-    print("WiFi connected:", wlan.ifconfig()[0])
-    return wlan
-
-
-# -----------------------------
-# MQTT connection
-# -----------------------------
-
-def mqtt_connect():
-    client = MQTTClient(
-        client_id=config.mqtt_client_id,
-        server=config.mqtt_host,
-        user=config.mqtt_username,
-        password=config.mqtt_password
-    )
-
-    client.connect()
-    print("MQTT connected")
-    return client
-
-
-# -----------------------------
-# Connect WiFi
-# -----------------------------
-
-wlan = wifi_connect()
-
-
-# -----------------------------
-# OTA update check
-# -----------------------------
-
-print("Checking for OTA update...")
-ota_update.check_for_updates()
-
-
-# -----------------------------
-# Connect MQTT
-# -----------------------------
-
-mqtt = mqtt_connect()
-
-
-# -----------------------------
-# Main loop
-# -----------------------------
-
-while True:
-
-    try:
-
-        if not wlan.isconnected():
-
-            print("WiFi lost. Reconnecting...")
-
-            wlan = wifi_connect()
-
-            try:
-                mqtt.disconnect()
-            except:
-                pass
-
-            mqtt = mqtt_connect()
-
-        temp_f = (bmp.read_temperature() / 100) * 9 / 5 + 32
-        pressure = bmp.pressure
-        lux = sensor.lux()
-
-        temp_f_str = "{:.2f}".format(temp_f)
-        pressure_str = str(pressure)
-        lux_str = "{:.2f}".format(lux)
-
-        mqtt.publish(config.temp_topic, temp_f_str)
-        mqtt.publish(config.pressure_topic, pressure_str)
-        mqtt.publish(config.light_topic, lux_str)
-
-        print("Lux:", lux_str)
-        print("Temperature F:", temp_f_str)
-        print("Pressure:", pressure_str)
-        print("Published OK")
-        print("-----")
-
-    except Exception as e:
-
-        print("Publish error:", e)
-
-        try:
-            mqtt.disconnect()
-        except:
-            pass
-
-        time.sleep(3)
-
-        try:
-            wlan = wifi_connect()
-            mqtt = mqtt_connect()
-        except Exception as reconnect_error:
-            print("Reconnect failed:", reconnect_error)
-
-    time.sleep(10)
