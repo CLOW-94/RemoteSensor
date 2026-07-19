@@ -258,9 +258,9 @@ def read_sensors():
 
     # Print raw sensor values for troubleshooting.
     # Once everything is working, you can comment these out.
-    print("Raw temperature:", temp_raw, "Type:", type(temp_raw))
-    print("Raw pressure:", pressure_raw, "Type:", type(pressure_raw))
-    print("Raw lux:", lux_raw, "Type:", type(lux_raw))
+#     print("Raw temperature:", temp_raw, "Type:", type(temp_raw))
+#     print("Raw pressure:", pressure_raw, "Type:", type(pressure_raw))
+#     print("Raw lux:", lux_raw, "Type:", type(lux_raw))
 
     # Clean and convert temperature.
     # Divide by 100 because your original working code did that.
